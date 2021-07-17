@@ -20,7 +20,7 @@ Tag = namedtuple('Tag', ['name', 'start', 'offset'])
 
 class Split(Enum):
     train = "train"
-    dev = "dev"
+    eval = "eval"
     test = "test"
 
 
@@ -146,40 +146,39 @@ class DeidProcessor(TokenClassificationTask):
         examples = []
         fn = os.path.join(fn, set_type.value)
 
-        # for de-id datasets, "fn" is a folder containing txt/ann subfolders
+        # for de-id datasets, "fn" is a folder containing txt/ann/xml subfolders
         # "txt" subfolder has text files with the text of the examples
         # "ann" subfolder has annotation files with the labels
+        # "xml" subfolder has annotation files with the labels
         txt_path = os.path.join(fn, 'txt')
-        ann_path = os.path.join(fn, 'ann')
+        # ann_path = os.path.join(fn, 'ann')
+        xml_path = os.path.join(fn, 'xml')
         for f in os.listdir(txt_path):
             if not f.endswith('.txt'):
                 continue
-
             # guid = "%s-%s" % (set_type, f[:-4])
             guid = f[:-4]
             with open(os.path.join(txt_path, f), 'r') as fp:
                 text = ''.join(fp.readlines())
 
             # load in the annotations
-            fn = os.path.join(ann_path, f'{f[:-4]}.gs')
+            fn = os.path.join(xml_path, f'{f[:-4]}.xml')
 
             # load the labels from a file
             # these datasets have consistent folder structures:
             #   root_path/txt/RECORD_NAME.txt - has text
             #   root_path/ann/RECORD_NAME.gs - has annotations
-            self.label_set.from_csv(fn)
+            self.label_set.from_xml(fn)
 
             tags = None
             if self.tagger is not None:
                 # call a function to generate binary tagging features
                 tags = self.tagger(text)
-
             examples.append(
                 InputExample(
                     guid=guid,
                     text=text,
-                    labels=self.label_set.labels,
-                    patterns=patterns
+                    labels=self.label_set.labels
                 )
             )
 
@@ -202,7 +201,7 @@ class DeidProcessor(TokenClassificationTask):
         pad_token_label_id=-100,
         default_label='O',
         label_offset_shift=0
-    ):
+    ):  
         """
         label_offset_shift: subtract this off label indices. Helps facilitate slicing
         documents into sub-parts.
@@ -213,7 +212,6 @@ class DeidProcessor(TokenClassificationTask):
             encoded.words[i + 1] == encoded.words[i]
             for i in range(len(encoded.words) - 1)
         ]
-
         # initialize token labels as the default label
         # set subword tokens to padded token
         token_labels = [
@@ -257,13 +255,11 @@ class DeidProcessor(TokenClassificationTask):
                     for k in range(i, j)
                 ]
                 token_labels[i:j] = new_labels
-
         label_ids = [
             self.label_set.label_to_id[l]
             if l != pad_token_label_id else pad_token_label_id
             for l in token_labels
         ]
-
         return token_labels, label_ids
 
     def tokenize_with_labels(

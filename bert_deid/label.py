@@ -2,6 +2,9 @@ import csv
 import re
 from functools import partial
 
+from lxml import etree
+
+
 LABEL_SETS = ('i2b2_2006', 'i2b2_2014', 'physionet', 'dernoncourt_lee', 'rr')
 
 # Create a dictionary for mapping labels to standard categories.
@@ -62,7 +65,7 @@ LABEL_MEMBERSHIP = {
                 [
                     'LOCATION', 'ORGANIZATION', 'HOSPITAL', 'STREET', 'CITY',
                     'ZIP', 'URL', 'PROTECTED_ENTITY', 'PROTECTED ENTITY',
-                    'LOCATION-OTHER'
+                    'LOCATION-OTHER', 'DEPARTMENT'
                 ]
             ],
             ['AGE', ['AGE', 'AGE_>_89', 'AGE > 89']],
@@ -71,7 +74,7 @@ LABEL_MEMBERSHIP = {
                 'ID',
                 [
                     'BIOID', 'DEVICE', 'HEALTHPLAN', 'IDNUM', 'MEDICALRECORD',
-                    'ID', 'IDENTIFIER', 'OTHER'
+                    'ID', 'IDENTIFIER', 'OTHER', 
                 ]
             ],
             [
@@ -238,7 +241,6 @@ class LabelCollection(object):
                 )
             )
         self.label_list = list(self.define_label_set(data_type))
-
         # update our label list using the transform
         # if self.transform is not None:
         #     self.label_list = list(
@@ -250,7 +252,6 @@ class LabelCollection(object):
                 l for l, _ in LABEL_MEMBERSHIP[self.transform]
             )
             self.label_list.sort()
-
         # enforce 'O' to be first label in all cases
         if 'O' in self.label_list:
             additional_label = ['O']
@@ -314,6 +315,21 @@ class LabelCollection(object):
         # transform the labels as appropriate
         if len(self.labels) > 0:
             self.transform_labels()
+    
+    def from_xml(self, file_path):
+        tree = etree.parse(file_path)
+        root = tree.getroot()
+        text = root[0].text
+        tags = [dict(tag.attrib) for tag in root[1]]
+        tags.reverse()
+        self.labels = [
+            Label(
+                entity_type=tag['TYPE'],
+                start=int(tag['start'])-1,
+                length=int(tag['end']) - int(tag['start']),
+                entity=tag['text']
+            ) for tag in tags
+        ]
 
     def from_list(self, labels):
         self.labels = labels
@@ -451,7 +467,9 @@ class LabelCollection(object):
                 # locations
                 'LOCATION',
                 'HOSPITAL',
+                'DEPARTMENT',
                 'ORGANIZATION',
+                'ROOM',
                 'URL',
                 'STREET',
                 'STATE',

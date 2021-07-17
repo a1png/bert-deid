@@ -12,10 +12,9 @@ def download_blob(bucket_name, source_blob_name, destination_file_name):
     # bucket_name = "your-bucket-name"
     # source_blob_name = "storage-object-name"
     # destination_file_name = "local/path/to/file"
-
-    storage_client = storage.Client()
-
-    bucket = storage_client.bucket(bucket_name)
+    storage_client = storage.Client.from_service_account_json(
+        'bert_deid/a1png-project-bbe2ead9863e.json')
+    bucket = storage_client.bucket(bucket_name, user_project='a1png-project')
     blob = bucket.blob(source_blob_name)
     blob.download_to_filename(destination_file_name)
 

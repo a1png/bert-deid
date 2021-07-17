@@ -1,19 +1,20 @@
 from torch import nn
 import torch
 import numpy as np
-from bert_deid.crf import CRF
+from .model.crf import CRF
+# from torchcrf import CRF
 from transformers import BertModel, BertPreTrainedModel
 
-
 class BertCRF(BertPreTrainedModel):
-    def __init__(self, config):
+    def __init__(self, bert_model, config):
         super().__init__(config)
         config.output_hidden_states = True
-        self.bert = BertModel(config)
+        self.bert = bert_model
         self.hidden_size = config.hidden_size
         self.num_labels = config.num_labels
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.hidden2label = nn.Linear(config.hidden_size, self.num_labels)
+        self.init_weights()
         self.crf = CRF(num_tags=self.num_labels, batch_first=True)
 
     def forward(
@@ -26,7 +27,7 @@ class BertCRF(BertPreTrainedModel):
         )
 
         last_encoder_layer = outputs[0]  # (batch_size, seq_length, hidden_size)
-
+        # print(attention_mask, token_type_ids, labels, sep='\n------------\n')
         # mask all -100
         mask = (labels >= 0).long()
         # update all -100 to 0 to avoid indicies out-of-bound in CRF

@@ -6,7 +6,6 @@ from filelock import FileLock
 import torch
 from torch import nn
 from torch.utils.data.dataset import Dataset
-
 from bert_deid.processors import InputFeatures, TokenClassificationTask, Split
 
 logger = logging.getLogger(__name__)
@@ -27,7 +26,7 @@ class TokenClassificationDataset(Dataset):
         labels: List[str],
         model_type: str,
         max_seq_length: Optional[int] = None,
-        overwrite_cache=False,
+        overwrite_cache=True,
         mode: Split = Split.train,
     ):
         # Load data features from cache or dataset file
@@ -42,7 +41,6 @@ class TokenClassificationDataset(Dataset):
         # and the others will use the cache.
         lock_path = cached_features_file + ".lock"
         with FileLock(lock_path):
-
             if os.path.exists(cached_features_file) and not overwrite_cache:
                 logger.info(
                     f"Loading features from cached file {cached_features_file}"
@@ -55,9 +53,11 @@ class TokenClassificationDataset(Dataset):
                 examples = token_classification_task.read_examples_from_file(
                     data_dir, mode
                 )
+                print(len(examples),5555)
                 self.features = token_classification_task.convert_examples_to_features(
                     examples, labels, tokenizer
                 )
+                print(len(self.features), 66666)
                 logger.info(
                     f"Saving features into cached file {cached_features_file}"
                 )

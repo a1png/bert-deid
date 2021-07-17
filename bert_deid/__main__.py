@@ -14,7 +14,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
+MODEL_DIR = 'bert_deid_model'
 class EnvDefault(argparse.Action):
     def __init__(self, envvar, required=True, default=None, **kwargs):
         if not default and envvar:
@@ -34,13 +34,13 @@ def parse_arguments(arguments=None):
         description="bert-deid command line interface"
     )
     # shared arguments
-    parser.add_argument(
-        '--model_dir',
-        action=EnvDefault,
-        required=True,
-        envvar='MODEL_DIR',
-        help='Folder containing model to use'
-    )
+    # parser.add_argument(
+    #     '--model_dir',
+    #     action=EnvDefault,
+    #     required=True,
+    #     envvar='MODEL_DIR',
+    #     help='Folder containing model to use'
+    # )
     parser.add_argument('--model_type', required=False, default='bert', help='')
 
     subparsers = parser.add_subparsers(dest="actions", title="actions")
@@ -117,8 +117,8 @@ def apply(args):
         print(deid_model.apply(args.text, args.repl), file=sys.stdout)
 
 
-def download(args):
-    download_model(args.model_dir)
+def download():
+    download_model(MODEL_DIR)
 
 
 def main(argv=sys.argv):
@@ -128,7 +128,7 @@ def main(argv=sys.argv):
     if args.actions == 'download':
         # add logging if we call download from command line
         download_logger.setLevel(logging.INFO)
-        download(args)
+        download()
     elif args.actions == 'apply':
         apply(args)
     else:

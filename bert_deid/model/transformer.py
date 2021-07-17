@@ -72,6 +72,7 @@ class Transformer(object):
         # task applied
         # TODO: figure out how to load this from saved model
         label_set = LabelCollection('i2b2_2014', transform='simple')
+        self.label_set = label_set
         self.token_classification_task = processors.DeidProcessor(
             data_dir='', label_set=label_set
         )
@@ -334,7 +335,7 @@ class Transformer(object):
         preds = self._logits_to_standoff(logits, inputs, ignore_label='O')
 
         # returns a list of the predictions with the token span
-        return preds
+        return np.array(preds)
 
     def apply(self, text, repl='___'):
         preds = self.predict(text)

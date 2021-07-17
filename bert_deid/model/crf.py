@@ -336,5 +336,4 @@ class CRF(nn.Module):
             # Reverse the order because we start from the last timestep
             best_tags.reverse()
             best_tags_list.append(best_tags)
-
         return best_tags_list
