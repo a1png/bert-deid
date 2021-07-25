@@ -46,3 +46,26 @@ class BertCRF(BertPreTrainedModel):
             )
             outputs = (-1 * log_likelihood, ) + outputs
         return outputs
+
+    def neg_log_likelihood(self, input_ids, attention_mask=None, token_type_ids=None, labels=None):
+        outputs = self.bert(
+            input_ids=input_ids,
+            token_type_ids=token_type_ids,
+            attention_mask=attention_mask
+        )
+
+        last_encoder_layer = outputs[0]  # (batch_size, seq_length, hidden_size)
+        # print(attention_mask, token_type_ids, labels, sep='\n------------\n')
+        # mask all -100
+        mask = (labels >= 0).long()
+        # update all -100 to 0 to avoid indicies out-of-bound in CRF
+        labels = labels * mask
+        mask = mask.to(torch.uint8)  #.byte()
+
+        last_encoder_layer = self.dropout(last_encoder_layer)
+        emissions = self.hidden2label(last_encoder_layer)
+
+        log_likelihood = self.crf(
+            emissions=emissions, tags=labels, mask=mask
+        )
+        return -1 * log_likelihood

@@ -194,8 +194,8 @@ def map_tags_to_tokens(example, offsets):
 def align_predictions(
     predictions: np.ndarray, label_ids: np.ndarray, label_map: dict
 ) -> Tuple[List[int], List[int]]:
-    preds = np.argmax(predictions, axis=2)
-    # preds = predictions
+    # preds = np.argmax(predictions, axis=2)
+    preds = predictions
     print(preds.shape)
     batch_size = preds.shape[0]
 
@@ -206,7 +206,6 @@ def align_predictions(
     idx = label_ids != CrossEntropyLoss().ignore_index
     out_label_list = []
     preds_list = []
-    print(label_ids, idx)
     for i in range(batch_size):
         out_label_list.append(list(map(label_map.get, label_ids[i, idx[i, :]])))
         preds_list.append(list(map(label_map.get, preds[i, idx[i, :]])))

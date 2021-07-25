@@ -53,11 +53,9 @@ class TokenClassificationDataset(Dataset):
                 examples = token_classification_task.read_examples_from_file(
                     data_dir, mode
                 )
-                print(len(examples),5555)
                 self.features = token_classification_task.convert_examples_to_features(
                     examples, labels, tokenizer
                 )
-                print(len(self.features), 66666)
                 logger.info(
                     f"Saving features into cached file {cached_features_file}"
                 )

@@ -17,7 +17,7 @@
 import logging
 import os
 import sys
-import re
+import time
 
 from dataclasses import dataclass, field
 from functools import partial
@@ -26,7 +26,7 @@ from typing import Dict, List, Optional, Tuple
 
 from seqeval.metrics import accuracy_score, f1_score, precision_score, recall_score
 
-import numpy as np
+import torch
 from torch import nn
 
 from transformers import (
@@ -49,6 +49,9 @@ from bert_deid.BERT_CRF import BertCRF
 from bert_deid.processors import Split, TokenClassificationTask
 from bert_deid.datasets import TokenClassificationDataset
 from bert_deid.tokenization import align_predictions
+from pytorch_pretrained_bert.optimization import BertAdam
+
+from bert_deid.trainer import BertCRFTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +162,8 @@ def main():
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses(
         )
-    
+    training_args.num_train_epochs=8.0
+    training_args.learning_rate=1e-05
     # training_args.do_eval = True
 
     if (
@@ -178,6 +182,7 @@ def main():
         level=logging.INFO
         if training_args.local_rank in [-1, 0] else logging.WARN,
     )
+
     logger.warning(
         "Process rank: %s, device: %s, n_gpu: %s, distributed training: %s, 16-bits training: %s",
         training_args.local_rank,
@@ -192,6 +197,7 @@ def main():
 
     # Set seed
     set_seed(training_args.seed)
+
     
     # Prepare the task
     label_set = LabelCollection(
@@ -230,22 +236,23 @@ def main():
         use_fast=True,
     )
 
-    model = AutoModelForTokenClassification.from_pretrained(
-        model_args.model_name_or_path,
-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
-        config=config,
-        cache_dir=model_args.cache_dir,
-    )
-    # print(111, model)
-
-    # bert_model = BertModel.from_pretrained(        
+    # model = AutoModelForTokenClassification.from_pretrained(
     #     model_args.model_name_or_path,
     #     from_tf=bool(".ckpt" in model_args.model_name_or_path),
     #     config=config,
     #     cache_dir=model_args.cache_dir,
     # )
-    # model = BertCRF(bert_model, config)
-    # print(model)
+    # print(111, model)
+    # print(222, type(model))
+
+    bert_model = BertModel.from_pretrained(        
+        model_args.model_name_or_path,
+        from_tf=bool(".ckpt" in model_args.model_name_or_path),
+        config=config,
+        cache_dir=model_args.cache_dir,
+    )
+    model = BertCRF(bert_model, config)
+    print(333, type(bert_model), type(model))
 
     # Get datasets
     train_dataset = (
@@ -283,8 +290,22 @@ def main():
             "f1": f1_score(out_label_list, preds_list),
         }
 
-    # Initialize our Trainer
-    trainer = Trainer(
+    learning_rate = 5e-5
+    warmup_proportion = 0.1
+    batch_size = 8
+    gradient_accumulation_steps = 1
+    total_train_epochs = training_args.num_train_epochs
+    total_train_steps = int(len(train_dataset) / batch_size / gradient_accumulation_steps * total_train_epochs)
+    weight_decay_finetune = 1e-5 #0.01
+    no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
+    named_params = list(model.named_parameters())
+    optimizer_grouped_parameters = [
+        {'params': [p for n, p in named_params if not any(nd in n for nd in no_decay)], 'weight_decay': weight_decay_finetune},
+        {'params': [p for n, p in named_params if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+    ]
+    optimizer = BertAdam(optimizer_grouped_parameters, lr=learning_rate, warmup=warmup_proportion, t_total=total_train_steps)
+
+    trainer = BertCRFTrainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
@@ -292,7 +313,6 @@ def main():
         compute_metrics=compute_metrics,
     )
 
-    # Training
     if training_args.do_train:
         # validate the labels
         for feature in train_dataset.features:
@@ -302,6 +322,7 @@ def main():
                     for t in feature.label_ids
                 ]
             ), 'label_ids outside valid range for num_labels, check cache'
+        
         trainer.train(
             model_path=model_args.model_name_or_path if os.path.
             isdir(model_args.model_name_or_path) else None
