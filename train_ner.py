@@ -242,8 +242,6 @@ def main():
     #     config=config,
     #     cache_dir=model_args.cache_dir,
     # )
-    # print(111, model)
-    # print(222, type(model))
 
     bert_model = BertModel.from_pretrained(        
         model_args.model_name_or_path,
@@ -289,21 +287,6 @@ def main():
             "recall": recall_score(out_label_list, preds_list),
             "f1": f1_score(out_label_list, preds_list),
         }
-
-    learning_rate = 5e-5
-    warmup_proportion = 0.1
-    batch_size = 8
-    gradient_accumulation_steps = 1
-    total_train_epochs = training_args.num_train_epochs
-    total_train_steps = int(len(train_dataset) / batch_size / gradient_accumulation_steps * total_train_epochs)
-    weight_decay_finetune = 1e-5 #0.01
-    no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
-    named_params = list(model.named_parameters())
-    optimizer_grouped_parameters = [
-        {'params': [p for n, p in named_params if not any(nd in n for nd in no_decay)], 'weight_decay': weight_decay_finetune},
-        {'params': [p for n, p in named_params if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
-    ]
-    optimizer = BertAdam(optimizer_grouped_parameters, lr=learning_rate, warmup=warmup_proportion, t_total=total_train_steps)
 
     trainer = BertCRFTrainer(
         model=model,
