@@ -461,16 +461,16 @@ class LabelCollection(object):
                 # names
                 'DOCTOR',
                 'PATIENT',
-                'USERNAME',
+                # 'USERNAME',
                 # professions
-                'PROFESSION',
+                # 'PROFESSION',
                 # locations
-                'LOCATION',
+                # 'LOCATION',
                 'HOSPITAL',
                 'DEPARTMENT',
                 'ORGANIZATION',
                 'ROOM',
-                'URL',
+                # 'URL',
                 'STREET',
                 'STATE',
                 'CITY',
@@ -483,13 +483,13 @@ class LabelCollection(object):
                 'DATE',
                 # IDs
                 'BIOID',
-                'DEVICE',
-                'HEALTHPLAN',
+                # 'DEVICE',
+                # 'HEALTHPLAN',
                 'IDNUM',
                 'MEDICALRECORD',
                 # contacts
-                'EMAIL',
-                'FAX',
+                # 'EMAIL',
+                # 'FAX',
                 'PHONE'
             )
         if label_type == 'dernoncourt_lee':
